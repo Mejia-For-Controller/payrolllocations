@@ -15,66 +15,10 @@ mapboxgl.workerClass = require('worker-loader!mapbox-gl/dist/mapbox-gl-csp-worke
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiY29tcmFkZWt5bGVyIiwiYSI6ImNrdjBkOXNyeDdscnoycHE2cDk4aWJraTIifQ.77Gid9mgpEdLpFszO5n4oQ';
  
-const locations = require('./features.json')
+//const locations = require('./features.json')
 
 
 //console.log(locations)
-
-function isStringOneThousandFt(stringInput: string) {
-  console.log('stringinput', stringInput)
-  return (stringInput.match(/Design/gi) || stringInput.match(/Navigation/gi))
-}
-
-var locationsBuffered = locations.features.map((eachFeature:any,eachFeatureIndex:any) => {
-  var polygon = turf.polygon(eachFeature.geometry.coordinates);
-  //console.log(polygon)
-
-  var buffered:any;
-
- // console.log(eachFeatureIndex)
- // console.log(locations.features[eachFeatureIndex].properties.category)
-  if (isStringOneThousandFt(eachFeature.properties.category)) {
-    buffered = turf.buffer(polygon, 1000, { units: 'feet' });
-  //  console.log('1000ft', locations.features[eachFeatureIndex].properties.address)
-  } else {
-  buffered = turf.buffer(polygon, 500, { units: 'feet' });
-  }
-
-  buffered.properties = eachFeature.properties;
-  return buffered;
-})
-
-//console.log(locationsBuffered)
-
-const currentSetGlobal = 2
-
-
-var geoJsonBoundary:any = {
-  features: locationsBuffered,
-  type: "FeatureCollection"
-}
-
-function centroids(geojsonobj: any) {
-  var featuresTotal: any =  {
-    features: [],
-    type: "FeatureCollection"
-  }
-
-  geojsonobj.features.forEach((eachFeature: any, eachFeatureIndex: any) => {
-    var polygon = turf.polygon(eachFeature.geometry.coordinates);
-
-    var centroid = turf.centroid(polygon);
-    eachFeature.properties['centroid'] = centroid
-    console.log(centroid)
-
-    featuresTotal.features.push(eachFeature)
-  });
-
-  return featuresTotal;
-}
-
-var locationsCentroids = centroids(locations)
-console.log('locationsCentroids', locationsCentroids)
 
 function showMapboxStuff() {
   /*
@@ -148,56 +92,6 @@ function checkStateOfSidebarAndUpdateOtherComponents() {
   }
 }
 
-function splitIntoYellowAndRed(geojsonobj: any) {
-  //console.log('splitInto', geojsonobj)
-  var thousands:any = {
-    features: [],
-      type: "FeatureCollection"
-  }
-
-  var fivehundreds:any = {
-    features: [],
-    type: "FeatureCollection"
-  }
-
-  var featuresTotal: any =  {
-    features: [],
-    type: "FeatureCollection"
-  }
-
-  geojsonobj.features.forEach((eachFeature: any, eachFeatureIndex: any) => {
-
-    if (isStringOneThousandFt(eachFeature.properties.category)) {
-   
-      eachFeature.properties['buffer'] = '1000'
-      
-      console.log()
-      thousands['features'].push(eachFeature)
-    } else {
-      eachFeature.properties['buffer'] = '500'
-      fivehundreds['features'].push(eachFeature)
-    }
-
-    featuresTotal['features'].push(eachFeature)
-  })
-  
-  return {thousands, fivehundreds, featuresTotal}
-}
-
-var boundsUpcoming = geoJsonBoundary.features.filter((eachFeature: any) => parseInt(eachFeature.properties.set,10) > currentSetGlobal)
-
-var boundsUpcomingGeojson: any =  {
-  features: boundsUpcoming,
-  type: "FeatureCollection"
-}
-
-const { thousands, fivehundreds, featuresTotal } = splitIntoYellowAndRed(locations)
-const {thousands : thousandsBuffer, fivehundreds : fivehundredsBuffer, featuresTotal: featuresTotalBuffer} = splitIntoYellowAndRed(geoJsonBoundary)
-const {thousands : thousandsBufferUpcoming, fivehundreds : fivehundredsBufferUpcoming, featuresTotal: featuresTotalBufferUpcoming} = splitIntoYellowAndRed(boundsUpcomingGeojson)
-
-console.log('thousandsBufferUpcoming', thousandsBufferUpcoming)
-
-
 const formulaForZoom = () => {
   if (window.innerWidth > 700) {
     return 10
@@ -239,7 +133,6 @@ lng: lngParam || -118.41,
   zoom: zoomParam || formulaForZoom(),
   featureSelected: {},
   infoBoxShown: true,
-  currentSet: currentSetGlobal,
   debugState: !!(debugParam)
 };
 this.mapContainer = React.createRef();
@@ -392,204 +285,11 @@ zoom: map.getZoom().toFixed(2)
 });
      
      this.popupfunc = (e:any) => {
-       // Copy coordinates array.
-     //  console.log(e)
-       const coordinates = e.lngLat
-
-       var resultOfCalculation;
-       
-       var pt = turf.point([coordinates.lng,coordinates.lat]);
-//const description = e.features[0].properties.description;
-       
-       var featureMatchingClick:any;
-       
-       //foreach thing in featuresTotalBuffer
-       featuresTotalBuffer.features.forEach((eachFeature: any) => {
-        // console.log(eachFeature)
-         var poly = turf.polygon([eachFeature.geometry.coordinates[0]]);
-         
-         resultOfCalculation = turf.booleanPointInPolygon(pt, poly)
-         if (resultOfCalculation === true) {
-           featureMatchingClick = eachFeature;
-           return eachFeature;
-         }
-       })
-
-       console.log('success found feature clicked', featureMatchingClick)
-       
-       if (featureMatchingClick) {
-         this.setState((state: any, props: any) => {
-           return {
-             isPopupActive: true,
-             featureSelected: featureMatchingClick
-           }
-         })
-       }
-       //do the turf inside function
-       // if true, display the popup state
- 
-// Ensure that if the map is zoomed out such that multiple
-// copies of the feature are visible, the popup appears
-// over the copy being pointed to.
-       this.setState({
-         isPopupActive: true
-       })
+  
      }
   
 map.on('load', () => {
  
-  
-  map.addLayer({
-    // buffer
-    id: 'locationsBuffer',
-    type: 'fill',
-    source: {
-      type: 'geojson',
-      data:  fivehundredsBuffer
-    },
-    paint: {
-      "fill-color": "#ff0000",
-      "fill-opacity": ["interpolate",
-      ["exponential", 1],
-         ['zoom'],
-         10, 0.7,
-         15, 0.6,
-       18, 0.4
-   ]
-    }
-  });
-
-  map.on('click', 'locationsBuffer', event => this.popupfunc(event))
-  map.addLayer({
-    // buffer
-    id: 'locationsThousandsBuffer',
-    type: 'fill',
-    source: {
-      type: 'geojson',
-      data:  thousandsBuffer
-    },
-    paint: {
-      "fill-color": "#CA8A04",
-      "fill-opacity": ["interpolate",
-      ["exponential", 1],
-         ['zoom'],
-         10, 0.7,
-         15, 0.6,
-       18, 0.4
-   ]
-    }
-  });
-
-  map.on('click', 'locationsThousandsBuffer', event => this.popupfunc(event))
-  map.addLayer({
-    //illegal zone solid
-    id: 'locations',
-    type: 'fill',
-    source: {
-      type: 'geojson',
-      data: fivehundreds
-    },
-    paint: {
-      "fill-color": "#ffaaaa",
-      "fill-opacity": ["interpolate",
-     ["exponential", 1],
-        ['zoom'],
-        10, 0.9,
-        12, 0.6,
-        13, 0.6,
-        15, 0.5,
-        17, 0.4,
-      18, 0.3
-  ]
-    }
-  });
-
-  map.on('click', 'locations', event => this.popupfunc(event))
-
-  map.addLayer({
-    //illegal zone solid
-    id: 'locationsThousands',
-    type: 'fill',
-    source: {
-      type: 'geojson',
-      data: thousands
-    },
-    paint: {
-      "fill-color": "#FEF08A",
-      "fill-opacity": ["interpolate",
-     ["exponential", 1],
-        ['zoom'],
-        10, 0.9,
-        12, 0.6,
-        13, 0.6,
-        15, 0.5,
-        17, 0.4,
-      18, 0.3
-  ]
-    }
-  });
-
-
-
-  map.on('click', 'locationsThousands', event => this.popupfunc(event))
-
-
-
-  //dashed upcoming lines
-
-
-  map.addLayer({
-    //illegal zone solid
-    id: 'locationsThousandsUpcomingDashed',
-    type: 'line',
-    source: {
-      type: 'geojson',
-      data: thousandsBufferUpcoming
-    },
-    paint: {
-      "line-color": "#FEF08A",
-      "line-width":  ["interpolate",
-      ["exponential", 1],
-        ['zoom'],
-         6, 2,
-        10, 4,
-         15, 5
-   ],
-      'line-dasharray': [5, 5, 5, 5],
-      'line-offset': 3,
-      'line-opacity': 0.5
-    }
-  });
- 
-
-
-  map.addLayer({
-    //illegal zone solid
-    id: 'locationsFiveHundredsUpcomingDashed',
-    type: 'line',
-    source: {
-      type: 'geojson',
-      data: fivehundredsBufferUpcoming
-    },
-    paint: {
-      "line-color": "#ffaaaa",
-      "line-width": ["interpolate",
-      ["exponential", 1],
-        ['zoom'],
-         6, 2,
-        10, 5,
-         15, 9
-   ],
-      'line-dasharray': [5, 5, 5, 5],
-      'line-offset': 3,
-      'line-opacity': ["interpolate",
-      ["exponential", 1],
-        ['zoom'],
-        10, 0,
-         13, 0.9
-   ],
-    }
-  });
 });
     
      
@@ -610,7 +310,7 @@ Longitude: {lng} | Latitude: {lat} | Zoom: {zoom}
     <div
       className=' outsideTitle max-h-screen flex-col flex z-50'
     >
-      <div className='titleBox max-h-screen mt-2 ml-2 md:mt-3 md:ml-3 break-words'>41.18 By-Resolution Areas</div>
+      <div className='titleBox max-h-screen mt-2 ml-2 md:mt-3 md:ml-3 break-words'>Where do City Employees Live?</div>
       {
         this.state.debugState && (
           <div className="sidebar-debug mx-4 mt-2 mb-1 bg-gray-900 text-white">
@@ -623,24 +323,7 @@ Longitude: {lng} | Latitude: {lat} | Zoom: {zoom}
           <div
           className='flex-none font-sans mt-5 md:mt-3 p-2 banned-box-text ml-2 md:ml-3 bg-truegray-900 bg-opacity-90 md:bg-opacity-70 rounded-xl text-xs' style={{
           
-        }}> <div className='md:max-w-xs  mt-1'>Banned: sit, lie, sleep, or store, use, maintain, or place personal property within:</div>
-        <div
-        className='md:max-w-xs mt-1'
-        ><span className='font-mono h-1 w-1 bg-yellow-500 text-black rounded-full px-2 py-1 mr-2'>1000ft</span>Facility providing shelter, safe sleeping, safe parking, or serving as a homeless services navigation center</div>
-         <div
-        className='md:max-w-xs  mt-1' 
-            ><span className='font-mono h-1 w-1 bg-red-600 rounded-full px-2 py-1 mr-2'>500ft</span>Other locations (school, park, tunnel, underpass, bridge, active railway, etc.)</div>
-           <div
-               className='md:max-w-xs flex flex-row  mt-1' 
-            >
-            <svg xmlns="http://www.w3.org/2000/svg" version="1.1" x="0px" y="0px" viewBox="0 0 24 30" enable-background="new 0 0 24 24" className='text-white w-5 flex-none' stroke='currentColor' fill='currentColor'><path d="M7,11H5c-0.6,0-1,0.4-1,1s0.4,1,1,1h2c0.6,0,1-0.4,1-1S7.6,11,7,11z"/><path d="M13,13c0.6,0,1-0.4,1-1s-0.4-1-1-1h-2c-0.6,0-1,0.4-1,1s0.4,1,1,1H13z"/><path d="M19,11h-2c-0.6,0-1,0.4-1,1s0.4,1,1,1h2c0.6,0,1-0.4,1-1S19.6,11,19,11z"/></svg>
-             : Pending Vote by Council
-            </div> 
-         <div className='md:max-w-xs mt-0'>Only covers by-resolution locations voted on by City Council. See ordinance for more info.</div>
-            <div className='flex-row  mt-1'>
-            <a  target="_blank" rel='external' className='underline text-mejito' href='https://clkrep.lacity.org/onlinedocs/2020/20-1376-S1_ord_187127_09-03-21.pdf'>41.18 Ordinance</a>
-            <a  target="_blank" rel='author' className='underline text-mejito ml-4' href='https://mejiaforcontroller.com'>Mejia For Controller</a>
-          </div>
+        }}> 
         </div>
     )}
         <div className={`hidden md:block flex-none ${this.state.infoBoxShown ? 'absolute' : ''} w-6 h-6 bg-opacity-95 bg-mejito text-black rounded-full md:ml-3 md:my-3`}
@@ -694,45 +377,11 @@ Longitude: {lng} | Latitude: {lat} | Zoom: {zoom}
             }}
             className="h-6 w-6 flex-shrink md:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-</svg><p className='flex-grow  scrollbar scrollbar-thumb-gray-400 scrollbar-rounded scrollbar scrollbar-thin scrollbar-trackgray-900 '>List - By-Resolution Areas</p>
+</svg><p className='flex-grow  scrollbar scrollbar-thumb-gray-400 scrollbar-rounded scrollbar scrollbar-thin scrollbar-trackgray-900 '>List of City Employees</p>
         
         </div>
         {
-      featuresTotal.features.map((eachFeature:any,eachFeatureIndex:any) => (
-        <div className=' bg-truegray-800 my-2 px-2 py-1 rounded-sm ' key={eachFeatureIndex} onClick={(event) => {
-          this.toggleList();
-          checkStateOfSidebarAndUpdateOtherComponents();
-          this.setState((state: any, props: any) => {
-            return {
-              isPopupActive: true,
-              featureSelected: eachFeature
-            }
-          })
-          this.flyToPoint(eachFeature.properties.centroid.geometry.coordinates[0], eachFeature.properties.centroid.geometry.coordinates[1], this.map, eachFeature, eachFeatureIndex,
-            featuresTotalBuffer.features[eachFeatureIndex])
-          }}>
-          <p className='font-bold'>{eachFeature.properties.address}</p>
-       
-          <p>{(eachFeature.properties.buffer === '1000' && (
-            <span className='font-mono h-1 w-1 bg-yellow-500 text-black rounded-full px-1 py-1 mr-1 font-xs'>1000ft</span>
-          ))}
-            {(eachFeature.properties.buffer === '500' && (
-            <span className='font-mono h-1 w-1 bg-red-600 text-black rounded-full px-1 py-1 mr-1 font-xs'>500ft</span>
-            ))}
-            {eachFeature.properties.category}<br>
-            </br>
-            <p>{parseInt(eachFeature.properties.set, 10) > this.state.currentSet && (
-              "Pending "
-            )}
-              {parseInt(eachFeature.properties.set, 10) <= this.state.currentSet && (
-              "Enacted "
-            )}
-              {eachFeature.properties.date}</p>
-            {/*eachFeature.properties.centroid.geometry.coordinates[0]} {eachFeature.properties.centroid.geometry.coordinates[1]*/}
-            <p className='pt-1 underline'>View on Map</p>
-          </p>
-       </div>
-      ))
+ 
     }
       </div>
 
